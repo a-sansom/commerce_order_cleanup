@@ -89,30 +89,36 @@ function drush_commerce_order_cleanup_delete_orders($interval = 0) {
   if (empty($order_ids)) {
     return drush_set_error('No orders to delete for given search. Generated query is: ' . $query);
   }
-  // Do the deleting part.
-  drush_print(dt("Found !count records to delete", array('!count' => count($order_ids))));
+  $total_count = count($order_ids);
   // Display the state of the records before delete.
   drush_commerce_order_cleanup_state();
-  $st_time = microtime(TRUE);
-  $batch_size = variable_get('commerce_order_cleanup_batch_size', 100);
-  $count = count($order_ids);
-  $ids = array_chunk($order_ids, $batch_size);
-  $params = array('!total_count' => $count);
-  for($i=0; $i< ($count/$batch_size); $i++) {
-    $st_del_time = microtime(TRUE);
-    try {
-     commerce_order_delete($ids[$i]);
-    }
-    catch(Exception $e) {
-      drush_print($e->getMessage());
-    }
 
-    $params['!count'] = ($i+1) * $batch_size;
-    $params['!seconds'] = microtime(TRUE) - $st_del_time;
-    drush_print(dt('Deleted !count of !total_count orders (took !seconds sec).', $params));
+  // Do the deleting part.
+  drush_print(dt("Found !count records to delete.", array('!count' => $total_count)));
+
+  // get the batch size from config.
+  $batch_size = variable_get('commerce_order_cleanup_batch_size', 100);
+
+  // chunk the nids, instead of foreach.
+  $batches = array_chunk($order_ids, $batch_size);
+
+  $operations = array();
+  foreach ($batches as $nids) {
+    $operations[] = array('commerce_order_cleanup_delete_multiple', array($nids));
   }
-  $params['!second'] = microtime(TRUE) - $st_time;
-  drush_print(dt('Deleted !total_count orders in !seconds sec.', $params));
+  $_SESSION['commerce_order_deleted'] = 0;
+  $_SESSION['commerce_order_total'] = $total_count;
+
+  $batch = array(
+    'operations' => $operations,
+    'error_message' => t('Error while trying to delete your order. Please try again (BATCH_INIT_FAIL).'),
+    'finished' => 'commerce_order_cleanup_delete_finished',
+    'file' => drupal_get_path('module', 'commerce_order_cleanup') . '/commerce_order_cleanup.admin.inc',
+  );
+
+  $batch['progressive'] = FALSE;
+  batch_set($batch);
+  drush_backend_batch_process();
 }
 
 /**
@@ -176,7 +182,7 @@ function _commerce_order_cleanup_build_query_filter() {
       $where .="ci.type='$type'";
     }
     else{
-      return drush_set_error('Invalid changed value');
+      return drush_set_error('Invalid type value');
     }
   }
 
@@ -188,7 +194,12 @@ function _commerce_order_cleanup_build_query_filter() {
     $where .="co.changed < '$changed'";
   }
   else{
-    return drush_set_error('Invalid changed value');
+    $ts_range = _commerce_order_cleanup_get_timestamp_range();
+    $params = array(
+      '!start_date' => date(DATE_ATOM, $ts_range['start']),
+      '!end_date' => date(DATE_ATOM, $ts_range['end'])
+    );
+    return drush_set_error(t('Invalid changed value. Make sure the changed date is in between !start_date and !end_date. set commerce_order_cleanup_min_date and/or commerce_order_cleanup_max_date varailbes to change the range.', $params));
   }
 
   // Status
@@ -199,7 +210,7 @@ function _commerce_order_cleanup_build_query_filter() {
       $where .="co.status='$status'";
     }
     else{
-      return drush_set_error('Invalid status value');
+      return drush_set_error('Invalid status value. Check "drush cocl status" for list of available status.');
     }
   }
 

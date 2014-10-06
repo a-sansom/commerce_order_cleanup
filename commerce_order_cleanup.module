@@ -39,7 +39,7 @@ function _commerce_order_cleanup_get_options($type) {
   switch ($type) {
     case 'status':
       if (empty($status_list)) {
-        $result = db_query("SELECT status FROM {commerce_order} GROUP BY status");
+        $result = db_query("SELECT DISTINCT status FROM {commerce_order}");
         foreach ($result as $row) {
           $status_list[] = array($row->status);
         }
@@ -64,7 +64,7 @@ function _commerce_order_cleanup_calculate_changed($changed) {
   if (is_int($changed) && _commerce_order_cleanup_is_valid_date($changed)) {
     return $changed;
   }
-  elseif (is_string($changed) && _commerce_order_cleanup_is_valid_date(strtotime($changed))) {
+  elseif (is_strIng($changed) && _commerce_order_cleanup_is_valid_date(strtotime($changed))) {
     return strtotime($changed);
   }
   return NULL;
@@ -80,10 +80,22 @@ function _commerce_order_cleanup_calculate_changed($changed) {
 function _commerce_order_cleanup_is_valid_date($timestamp) {
   // if it is timestamp, make sure it is in a range.
   // Start of commerce module in drupal.org
-  $start_date = strtotime('October 15, 2009 9:41pm');
-  $end_date = strtotime('-' . variable_get('commerce_order_cleanup_max_date', '1 year'));
-  if ($timestamp < $start_date || $timestamp > $end_date) {
+  $date_range = _commerce_order_cleanup_get_timestamp_range();
+  if ($timestamp < $date_range['start'] || $timestamp > $date_range['end']) {
     return FALSE;
   }
   return TRUE;
+}
+
+/**
+ * Helper to provide date range (in timestamp).
+ *
+ * @return array
+ */
+function _commerce_order_cleanup_get_timestamp_range() {
+  $start_var =  variable_get('commerce_order_cleanup_min_date', NULL);
+  $start = $start_var ? '-' . $start_var : 'October 15, 2009 9:41pm';
+  $date_range['start'] =  strtotime($start);
+  $date_range['end'] = strtotime('-' . variable_get('commerce_order_cleanup_max_date', '1 year'));
+  return $date_range;
 }
