@@ -4,8 +4,8 @@ Commerce Order Cleanup
 Allows to delete orders by various filters like last changed date, status.
 
 
-<img src="https://travis-ci.org/vijaycs85/commerce_order_cleanup.svg?branch=7.x-1.x" />
-<img src="https://insight.sensiolabs.com/projects/8f86b6bf-cee3-4456-97d5-88a67ca7bef9/mini.png" />
+<a href="https://travis-ci.org/vijaycs85/commerce_order_cleanup" target="_blank"><img src="https://travis-ci.org/vijaycs85/commerce_order_cleanup.svg?branch=7.x-1.x" /></a>
+<a href="https://insight.sensiolabs.com/projects/8f86b6bf-cee3-4456-97d5-88a67ca7bef9" target="_blank"><img src="https://insight.sensiolabs.com/projects/8f86b6bf-cee3-4456-97d5-88a67ca7bef9/mini.png" /></a>
 
 Configuration
 -------------
