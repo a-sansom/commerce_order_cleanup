@@ -17,7 +17,7 @@ function commerce_order_cleanup_menu() {
     'description' => 'Configure order cleanup.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_order_cleanup_settings'),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer commerce order cleanup'),
     'type' => MENU_NORMAL_ITEM,
     'weight' => 30,
     'file' => 'commerce_order_cleanup.admin.inc',
@@ -26,6 +26,16 @@ function commerce_order_cleanup_menu() {
   return $items;
 }
 
+/**
+ *  Implements hook_permission().
+ */
+function commerce_order_cleanup_permission() {
+  return array(
+    'administer commerce order cleanup' => array(
+      'title' => t('Administer commerce order cleanup'),
+    ),
+  );
+}
 
 /**
  * Providers available order status.
