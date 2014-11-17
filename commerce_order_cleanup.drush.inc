@@ -80,7 +80,7 @@ function drush_commerce_order_cleanup_delete_orders($type) {
       '!start_date' => date(DATE_ATOM, $ts_range['start']),
       '!end_date' => date(DATE_ATOM, $ts_range['end'])
     );
-    return drush_set_error(dt('Invalid changed value. Make sure the changed date is in between !start_date and !end_date. set commerce_order_cleanup_min_date and/or commerce_order_cleanup_max_date varailbes to change the range.', $params));
+    return drush_set_error(dt('Invalid changed value. Make sure the changed date is between !start_date and !end_date. set commerce_order_cleanup_min_date and/or commerce_order_cleanup_max_date varailbes to change the range.', $params));
   }
 
   /** @var SelectQuery $query */
