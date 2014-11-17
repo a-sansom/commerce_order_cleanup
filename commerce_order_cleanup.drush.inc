@@ -21,20 +21,19 @@ function commerce_order_cleanup_drush_help($section) {
 function commerce_order_cleanup_drush_command() {
   $items = array();
   $date_format = 'd-m-Y h:i:s';
-  $default_end_date = date($date_format, strtotime('-' . variable_get('commerce_order_cleanup_max_date', '1 year')));
   $items['commerce-order-cleanup-delete-orders'] = array(
+    'callback' => 'drush_commerce_order_cleanup_delete_orders',
     'description' => dt('Deletes commerce orders by various order properties like status, last changed.'),
-    'options' => array(
-      'changed' => dt('Order changed timestamp. Use timestamp or time string e.g. "-2 months". '),
-      'status' =>  dt('Status of an order. try drush cco --list-options="status" to get available status'),
+    'arguments' => array(
       'type' =>  dt('Type of line item in an order.'),
     ),
+    'options' => array(
+      'status' =>  dt('Status of an order. try drush cco --list-options="status" to get available status'),
+      'changed' => dt('Order changed timestamp. Use timestamp or time string e.g. "-2 months". '),
+    ),
     'examples' => array(
-      'drush coc' => dt("Delete all cart orders that were changed on or before @changed_default", array('@changed_default' => $default_end_date)),
-      'drush coc --status="checkout_complete"' => dt("Deletes all the orders in status 'checkout_complete' and changed on or before @changed_default", array('@changed_default' => $default_end_date)),
-      'drush coc --changed="-2 months"' => dt("Deletes all the orders that are changed on or before 2 months before. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' => $default_end_date)),
-      'drush coc --changed=1388534400' => dt("Deletes all the orders that are changed on or before 01-01-2014 00:00:00. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' => $default_end_date)),
-      'drush coc --type="shirt"' => dt("Deletes all the orders that have shirt line item  and changed on or before 01-01-2014 00:00:00. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' => $default_end_date)),
+      'drush coc product --status=checkout_complete --changed="-2 months"' => dt("List all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
+      'drush coc product --status=checkout_complete --changed="-2 months" -y' => dt("Delete all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
     ),
     'aliases' => array('coc'),
   );
@@ -50,20 +49,6 @@ function commerce_order_cleanup_drush_command() {
     'aliases' => array('cocl'),
   );
 
-  $items['commerce-order-cleanup-state'] = array(
-    'description' => dt('State of orders in the system.'),
-    'options' => array(
-      'changed' => dt('Order changed timestamp. Use timestamp or time string e.g. "-2 months"'),
-      'status' =>  dt('Status of an order. try drush cco --list-options="status" to get available status'),
-      'type' =>  dt('Type of line item in an order.'),
-    ),
-    'examples' => array(
-      'drush cocs' => dt("State of all cart orders"),
-      'drush cocs --status="checkout_complete"' => dt("State of  all the orders in status 'checkout_complete'"),
-    ),
-    'aliases' => array('cocs'),
-  );
-
   return $items;
 }
 
@@ -74,27 +59,69 @@ function commerce_order_cleanup_drush_command() {
  *   Duration the orders must have been in an unmodified unfinished state to be
  *   cleaned, in seconds.
  */
-function drush_commerce_order_cleanup_delete_orders($interval = 0) {
-  $filter = _commerce_order_cleanup_build_query_filter();
-  // Query filter can throw errors for invalid data.
-  if (drush_get_error()) {
-    return;
+function drush_commerce_order_cleanup_delete_orders($type) {
+  $status = drush_get_option('status', NULL);
+  $changed_raw = drush_get_option('changed', NULL);
+  if (empty($type) || empty($status) || empty($changed_raw)) {
+   return drush_set_error(dt('Invalid value. Please provide valid type, status and changed values.'));
   }
 
-  $query = "SELECT co.order_id FROM {commerce_order} co $filter";
-  $result = db_query($query);
+  // Make sure max date set for this filter.
+  $max_variable = _commerce_order_cleanup_get_variable('max', $type, $status);
+  if (!variable_get($max_variable, FALSE)) {
+    return drush_set_error(dt('Please set the allowed date limit for orders with line item type "!type" and status "!status". Try "drush vget commerce_order_cleanup_max" for list of status set.', array('!type' => $type, '!status' => $status)));
+  }
+
+  // Date validation.
+  $changed = _commerce_order_cleanup_calculate_changed($changed_raw, $type, $status);
+  if ($changed == NULL) {
+    $ts_range = _commerce_order_cleanup_get_timestamp_range($type, $status);
+    $params = array(
+      '!start_date' => date(DATE_ATOM, $ts_range['start']),
+      '!end_date' => date(DATE_ATOM, $ts_range['end'])
+    );
+    return drush_set_error(dt('Invalid changed value. Make sure the changed date is in between !start_date and !end_date. set commerce_order_cleanup_min_date and/or commerce_order_cleanup_max_date varailbes to change the range.', $params));
+  }
+
+  /** @var SelectQuery $query */
+  $query = db_select('commerce_order', 'co')
+    ->fields('co', array('order_id'))
+    ->condition('ci.type', $type)
+    ->condition('co.status', $status)
+    ->condition('co.changed', $changed , '<');
+  $query->join('commerce_line_item', 'ci', 'co.order_id = ci.order_id');
+
+  $result = $query->execute();
   foreach ($result as $row) {
     $order_ids[] = $row->order_id;
   }
   if (empty($order_ids)) {
-    return drush_set_error('No orders to delete for given search. Generated query is: ' . $query);
+    return drush_set_error(dt('No orders to delete for given search. Generated query is: !query', array('!query' => strtr((string) $query, $query->arguments()))));
   }
-  $total_count = count($order_ids);
-  // Display the state of the records before delete.
-  drush_commerce_order_cleanup_state();
 
-  // Do the deleting part.
-  drush_print(dt("Found !count records to delete.", array('!count' => $total_count)));
+  // Display the state of the records before delete.
+  drush_commerce_order_cleanup_display_state($type, $status, $changed);
+
+  // Confirm delete.
+  drush_print(dt("Found !count records to delete.", array('!count' => count($order_ids))));
+
+  // Just list, if no '-y'.
+  // Trying to avoid drush_confirm as it can allow to select wrong option on a
+  // high volume order base.
+  $confirm = drush_get_option('yes');
+
+  if ($confirm) {
+    return _commerce_order_cleanup_delete_orders($order_ids);
+  }
+  return ;
+
+}
+
+/**
+ * @param $order_ids
+ */
+function _commerce_order_cleanup_delete_orders($order_ids) {
+  $total_count = count($order_ids);
 
   // get the batch size from config.
   $batch_size = variable_get('commerce_order_cleanup_batch_size', 100);
@@ -147,14 +174,20 @@ function drush_commerce_order_cleanup_list_options($property) {
  *
  * @return mixed
  */
-function drush_commerce_order_cleanup_state() {
-  $where = _commerce_order_cleanup_build_query_filter();
-  // Query filter can throw errors for invalid data.
-  if (drush_get_error()) {
-    return;
-  }
-  $query = "SELECT co.status, COUNT(1) AS count, ci.type FROM {commerce_order} co $where GROUP BY status";
-  $result = db_query($query);
+function drush_commerce_order_cleanup_display_state($type, $status, $changed) {
+
+  /** @var SelectQuery $query */
+  $query = db_select('commerce_order', 'co')
+    ->fields('co', array('status'))
+    ->fields('ci', array('type'))
+    ->condition('ci.type', $type)
+    ->condition('co.status', $status)
+    ->condition('co.changed', $changed , '<');
+  $query->addExpression('COUNT(1)', 'count');
+  $query->join('commerce_line_item', 'ci', 'co.order_id = ci.order_id');
+  $query->groupBy('co.status');
+
+  $result = $query->execute();
   foreach ($result as $row) {
     $status_list[] = array($row->status, $row->type, $row->count);
   }
@@ -168,54 +201,61 @@ function drush_commerce_order_cleanup_state() {
 }
 
 /**
- * Helper to build query for given options.
+ * Helper to calculate changed timestamp.
  *
- * @return string
+ * @param int|string $changed
+ *   A integer timestamp or date string.
+ * @param string $date_variable
+ *
+ * @return int|null
+ *   timestamp if valid, NULL otherwise.
  */
-function _commerce_order_cleanup_build_query_filter() {
-  $where = '';
+function _commerce_order_cleanup_calculate_changed($changed, $type, $status) {
+  if (is_int($changed) && _commerce_order_cleanup_is_valid_date($changed, $type, $status)) {
+    return $changed;
+  }
+  elseif (is_string($changed) && _commerce_order_cleanup_is_valid_date(strtotime($changed), $type, $status)) {
+    return strtotime($changed);
+  }
+  return NULL;
+}
 
-  // Lineitem type.
-  $join = ' JOIN {commerce_line_item} ci ON co.order_id=ci.order_id ';
-  if ($type = drush_get_option('type')) {
-    if ($type !== NULL) {
-      $where .="ci.type='$type'";
-    }
-    else{
-      return drush_set_error('Invalid type value');
-    }
+/**
+ * Validates given date range is valid.
+ *
+ * @param $timestamp
+ * @param string $date_variable
+ *
+ * @return bool
+ */
+function _commerce_order_cleanup_is_valid_date($timestamp, $type, $status) {
+  // if it is timestamp, make sure it is in a range.
+  // Start of commerce module in drupal.org
+  $date_range = _commerce_order_cleanup_get_timestamp_range($type, $status);
+  if ($timestamp < $date_range['start'] || $timestamp > $date_range['end']) {
+    return FALSE;
   }
+  return TRUE;
+}
 
-  // User the changed date provided by user if available. Otherwise default.
-  $changed_raw = drush_get_option('changed') ? drush_get_option('changed') : '-' . variable_get('commerce_order_cleanup_max_date', '1 year');
-  $changed = _commerce_order_cleanup_calculate_changed($changed_raw);
-  if ($changed !== NULL) {
-    $where .= $where ? ' AND ' : '';
-    $where .="co.changed < '$changed'";
-  }
-  else{
-    $ts_range = _commerce_order_cleanup_get_timestamp_range();
-    $params = array(
-      '!start_date' => date(DATE_ATOM, $ts_range['start']),
-      '!end_date' => date(DATE_ATOM, $ts_range['end'])
-    );
-    return drush_set_error(t('Invalid changed value. Make sure the changed date is in between !start_date and !end_date. set commerce_order_cleanup_min_date and/or commerce_order_cleanup_max_date varailbes to change the range.', $params));
-  }
+/**
+ * Helper to provide date range (in timestamp).
+ *
+ * @param string $date_variable
+ *
+ * @return array
+ */
+function _commerce_order_cleanup_get_timestamp_range($type, $status) {
+  $min_var = _commerce_order_cleanup_get_variable('min', $type, $status);
+  $max_var = _commerce_order_cleanup_get_variable('max', $type, $status);
+  $start_var =  variable_get($min_var);
+  $start = $start_var ? '-' . $start_var : 'October 15, 2009 9:41pm';
+  $date_range['start'] =  strtotime($start);
+  // Max range has no fallback as it never comes to this stage, if it is not set.
+  $date_range['end'] = strtotime('-' . variable_get($max_var));
+  return $date_range;
+}
 
-  // Status
-  if ($status = drush_get_option('status')) {
-    // @TODO: Check if the status exist.
-    if ($status !== NULL) {
-      $where .= $where ? ' AND ' : '';
-      $where .="co.status='$status'";
-    }
-    else{
-      return drush_set_error('Invalid status value. Check "drush cocl status" for list of available status.');
-    }
-  }
-
-  if (!empty($where)) {
-    $where = $join . 'WHERE ' . $where;
-  }
-  return $where;
+function _commerce_order_cleanup_get_variable($range_type, $type, $status) {
+  return format_string('commerce_order_cleanup_!range_!type_!status', array('!range' => $range_type, '!type' => $type, '!status' => $status));
 }

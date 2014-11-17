@@ -43,23 +43,19 @@ class CommerceOrderCleanupConfigurationTestCase extends CommerceBaseTestCase {
     $this->drupalGet('admin/commerce/config/order-cleanup');
     $this->assertResponse(200);
     $this->assertField('commerce_order_cleanup_batch_size');
-    $this->assertField('commerce_order_cleanup_max_date');
 
     // Try to save configurations.
     $edit = array(
       'commerce_order_cleanup_batch_size' => 10,
-      'commerce_order_cleanup_max_date' => '6 months',
     );
     $this->drupalPost(NULL, $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
     // Make sure updated configuration displayed on the page.
     $this->assertFieldByName('commerce_order_cleanup_batch_size', 10);
-    $this->assertOptionSelected('edit-commerce-order-cleanup-max-date', '6 months');
 
     // Make sure the backend has the updated configuration values.
     $this->assertEqual(10, variable_get('commerce_order_cleanup_batch_size', NULL));
-    $this->assertEqual('6 months', variable_get('commerce_order_cleanup_max_date', NULL));
   }
 
   /**
