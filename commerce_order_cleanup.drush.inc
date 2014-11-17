@@ -32,8 +32,8 @@ function commerce_order_cleanup_drush_command() {
       'changed' => dt('Order changed timestamp. Use timestamp or time string e.g. "-2 months". '),
     ),
     'examples' => array(
-      'drush coc product --status=checkout_complete --changed="-2 months"' => dt("List all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
-      'drush coc product --status=checkout_complete --changed="-2 months" -y' => dt("Delete all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date. You can configure the allowed latest date at admin/commerce/config/order-cleanup", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
+      'drush coc product --status=checkout_complete --changed="-2 months"' => dt("List all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date.", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
+      'drush coc product --status=checkout_complete --changed="-2 months" -y' => dt("Delete all the orders have line item of type product with status 'checkout_complete' that are changed on or before 2 months. Currently you can delete the orders changed between @start_date and @end_date.", array('@start_date' => date($date_format, strtotime('October 15, 2009 9:41pm')), '@end_date' =>  date($date_format, strtotime('-2 months')))),
     ),
     'aliases' => array('coc'),
   );
