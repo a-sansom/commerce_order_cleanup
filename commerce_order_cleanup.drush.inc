@@ -85,10 +85,10 @@ function drush_commerce_order_cleanup_delete_orders($type) {
 
   /** @var SelectQuery $query */
   $query = db_select('commerce_order', 'co')
-    ->fields('co', array('order_id'))
     ->condition('ci.type', $type)
     ->condition('co.status', $status)
     ->condition('co.changed', $changed , '<');
+  $query->addExpression('DISTINCT(co.order_id)', 'order_id');
   $query->join('commerce_line_item', 'ci', 'co.order_id = ci.order_id');
 
   $result = $query->execute();
@@ -183,8 +183,8 @@ function drush_commerce_order_cleanup_display_state($type, $status, $changed) {
     ->condition('ci.type', $type)
     ->condition('co.status', $status)
     ->condition('co.changed', $changed , '<');
-  $query->addExpression('COUNT(1)', 'count');
-  $query->join('commerce_line_item', 'ci', 'co.order_id = ci.order_id');
+  $query->addExpression('COUNT(DISTINCT(co.order_id))', 'count');
+  $query->leftJoin('commerce_line_item', 'ci', 'co.order_id = ci.order_id');
   $query->groupBy('co.status');
 
   $result = $query->execute();
