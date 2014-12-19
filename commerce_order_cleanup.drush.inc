@@ -127,7 +127,7 @@ function drush_commerce_order_cleanup_delete_orders($type) {
   $confirm = drush_get_option('yes');
 
   if ($confirm) {
-    // return _commerce_order_cleanup_delete_orders($order_ids);
+    return _commerce_order_cleanup_delete_orders($order_ids);
   }
   return;
 
