@@ -2,9 +2,9 @@ name = Commerce Order Cleanup
 description = Allows to delete orders by various filters(like last changed date, status).
 package = Commerce (contrib)
 core = 7.x
+configure = admin/commerce/config/order-cleanup
 
 dependencies[] = commerce_order
 
 ; Tests
 files[] = tests/commerce_order_cleanup.admin.test
-files[] = tests/commerce_order_cleanup.test
