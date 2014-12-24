@@ -1,0 +1,70 @@
+<?php
+/**
+ * @file
+ * Module tests.
+ */
+
+class CommerceOrderCleanupUITestCase extends CommerceBaseTestCase {
+  /**
+   * User to utilise for tests.
+   */
+  protected $site_admin;
+
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Commerce Order Cleanup UI',
+      'description' => 'Tests Commerce Order Cleanup UI module',
+      'group' => 'Commerce Order Cleanup',
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    // Enable modules
+    $modules = parent::setUpHelper('all', array('commerce_order_cleanup', 'commerce_order_cleanup_ui'));
+    parent::setUp($modules);
+
+    // Create user with required permissions
+    $this->site_admin = $this->drupalCreateUser(
+      array('access administration pages', 'administer commerce order cleanup')
+    );
+
+    // Setup variable(s) to help with tests
+    // Test variable value(s) here are not representative of real var values.
+    variable_set('commerce_order_cleanup_min_product_canceled', 'TestMinVariableValue');
+  }
+
+  /**
+   * Test Commerce Order Cleanup variables are displayed when set.
+   */
+  function testCommerceOrderCleanupVariablesDisplayed() {
+    $this->drupalLogin($this->site_admin);
+    $this->drupalGet('admin/commerce/config/order-cleanup');
+    $this->assertResponse(200);
+
+    $this->assertText(t('commerce_order_cleanup_min_product_canceled'), 'Variable name is displayed');
+    $this->assertText(t('TestMinVariableValue'), 'Variable value is displayed');
+  }
+
+  /**
+   * Test Commerce Order Cleanup variables are not displayed when not set.
+   */
+  function testCommerceOrderCleanupVariablesNotDisplayed() {
+    // Remove the variable so we can test non display of value(s)
+    variable_del('commerce_order_cleanup_min_product_canceled');
+
+    $this->drupalLogin($this->site_admin);
+    $this->drupalGet('admin/commerce/config/order-cleanup');
+    $this->assertResponse(200);
+
+    $this->assertText(t('No variable(s) found.'), 'Empty table message displayed');
+    $this->assertNoText(t('commerce_order_cleanup_min_product_canceled'), 'Variable name correctly NOT displayed');
+    $this->assertNoText(t('TestMinVariableValue'), 'Variable value correctly NOT displayed');
+  }
+
+}

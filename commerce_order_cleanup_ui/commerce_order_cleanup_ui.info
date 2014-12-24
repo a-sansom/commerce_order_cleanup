@@ -1,7 +1,8 @@
-name = Commerce Order Cleanup Vars UI
+name = Commerce Order Cleanup UI
 description = List the variables currently set for use with the Commerce Order Cleanup module.
 package = Commerce (contrib)
 core = 7.x
-configure = admin/commerce/config/order-cleanup-vars-ui
 
 dependencies[] = commerce_order_cleanup
+; Module tests
+files[] = tests/commerce_order_cleanup_ui.test

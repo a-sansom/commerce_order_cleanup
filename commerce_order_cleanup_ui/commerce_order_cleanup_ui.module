@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * @file
+ * Commerce order cleanup variables user interface module.
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function commerce_order_cleanup_ui_form_commerce_order_cleanup_settings_alter(&$form, &$form_state) {
+  $form['variables'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Variables'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['variables']['variable_summary_text'] = array(
+    '#prefix' => '<p>',
+    '#suffix' => '</p>',
+    '#markup' => t('Table lists any variables that Commerce Order Cleanup can/will use.'),
+  );
+
+  $form['variables']['table'] = array(
+    '#theme' => 'table',
+    '#header' => array(t('Variable name'), t('Description'), t('Value')),
+    '#rows' => array(),
+  );
+
+  foreach (commerce_product_types() as $type_key => $type_definition) {
+    foreach (commerce_order_statuses() as $status_key => $status_definition) {
+      foreach (array('min', 'max') as $range) {
+        $variable_name = 'commerce_order_cleanup_' . $range . '_' . $type_key . '_' . $status_key;
+        $variable_value = variable_get($variable_name, '');
+
+        if ($variable_value) {
+          $form['variables']['table']['#rows'][] = array(
+            $variable_name,
+            t('Orders containing "@product_type" products with a status of
+              "@order_status" @range range constraint',
+              array(
+                '@product_type' => $type_definition['name'],
+                '@order_status' => $status_definition['title'],
+                '@range' => $range
+              )
+            ),
+            $variable_value,
+          );
+        }
+      }
+    }
+  }
+
+  if (!$form['variables']['table']['#rows']) {
+    $form['variables']['table']['#rows'][] = array(
+      array(
+        'data' => t('No variable(s) found.'),
+        'colspan' => 3
+      ),
+    );
+  }
+}
