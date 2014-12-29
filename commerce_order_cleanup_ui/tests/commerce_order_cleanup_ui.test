@@ -26,7 +26,7 @@ class CommerceOrderCleanupUITestCase extends CommerceBaseTestCase {
    */
   function setUp() {
     // Enable modules
-    $modules = parent::setUpHelper('all', array('commerce_order_cleanup', 'commerce_order_cleanup_ui'));
+    $modules = parent::setUpHelper('all', array('commerce_order_cleanup_ui'));
     parent::setUp($modules);
 
     // Create user with required permissions
