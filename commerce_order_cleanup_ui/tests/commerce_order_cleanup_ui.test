@@ -37,6 +37,8 @@ class CommerceOrderCleanupUITestCase extends CommerceBaseTestCase {
     // Setup variable(s) to help with tests
     // Test variable value(s) here are not representative of real var values.
     variable_set('commerce_order_cleanup_min_product_canceled', 'TestMinVariableValue');
+
+    cache_clear_all();
   }
 
   /**
