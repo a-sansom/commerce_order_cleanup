@@ -35,6 +35,7 @@ before_script:
   - cd commerce_order_cleanup/drupal
   - drush --yes dl commerce
   - drush --yes pm-enable commerce_order_cleanup
+  - drush --yes pm-enable commerce_order_cleanup_ui
 
   # start a web server on port 8080, run in the background; wait for initialization
   - drush runserver 127.0.0.1:8080 &
