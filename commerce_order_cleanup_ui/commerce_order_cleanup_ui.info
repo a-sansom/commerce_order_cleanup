@@ -3,6 +3,7 @@ description = List the variables currently set for use with the Commerce Order C
 package = Commerce (contrib)
 core = 7.x
 
+dependencies[] = commerce
 dependencies[] = commerce_order_cleanup
 ; Module tests
 files[] = tests/commerce_order_cleanup_ui.test
