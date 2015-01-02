@@ -10,6 +10,7 @@ dependencies[] = addressfield
 dependencies[] = ctools
 dependencies[] = commerce
 dependencies[] = commerce_product
+dependencies[] = commerce_product_ui
 dependencies[] = commerce_price
 dependencies[] = commerce_customer
 dependencies[] = commerce_line_item
