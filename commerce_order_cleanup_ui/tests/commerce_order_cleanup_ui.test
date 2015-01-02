@@ -29,7 +29,7 @@ class CommerceOrderCleanupUITestCase extends CommerceBaseTestCase {
     $this->site_admin = $this->drupalCreateUser(array('access administration pages', 'administer commerce order cleanup'));
 
     // Enable modules
-    $modules = parent::setUpHelper('all', array('commerce_order_cleanup_ui'));
+    $modules = parent::setUpHelper('all');
     parent::setUp($modules);
 
     // Setup variable(s) to help with tests
