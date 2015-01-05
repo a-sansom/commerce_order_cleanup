@@ -3,9 +3,16 @@ description = List the variables currently set for use with the Commerce Order C
 package = Commerce (contrib)
 core = 7.x
 
+; Actual dependencies
+dependencies[] = commerce_product
 dependencies[] = commerce_order_cleanup
+; Additional dependency for Travis CI
+dependencies[] = commerce_product_ui
 
+; Dependencies for Drupal testbot
+test_dependencies[] = commerce_product
 test_dependencies[] = commerce_product_ui
+test_dependencies[] = commerce_order
 
 ; Module tests
 files[] = tests/commerce_order_cleanup_ui.test
